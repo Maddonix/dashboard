@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Emission Evaluator{% endblock %}
+
+{% block styles %}
+<style>
+    .plot-container {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        width: 100%; /* This will make the container take the full width of its parent */
+        display: flex; /* This will let the div adjust its height based on its content */
+        align-items: flex-start; /* This will align the plot at the top of the container */
+        justify-content: center; /* This will center the plot horizontally if its width is less than the container's width */
+        overflow: auto; /* This will add a scrollbar if the plot width exceeds the container's width */
+    }
+
+    h2, h3 {
+        color: #333;
+    }
+    h2 {
+        margin-top: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Emission Evaluator</h1>
+
+<div class="form-group">
+    <label for="centerSelect">Select Center</label>
+    <select class="form-control" id="centerSelect">
+    {% for center in centers %}
+        <option value="{{ center.id }}">{{ center.name }}</option>
+    {% endfor %}
+    </select>
+</div>
+
+<!-- Summary -->
+<section>
+  <h2>Summary</h2>
+  <div id="summary_plot" class="plot-container"></div>
+</section>
+
+<!-- Scope 1 -->
+<section>
+  <h2>Scope 1</h2>
+
+  <!-- Resources Burnt -->
+  <div>
+    <h3>Resources Burnt</h3>
+    <div id="resources_burnt_plot" class="plot-container"></div>
+  </div>
+</section>
+
+<!-- Scope 2 -->
+<section>
+  <h2>Scope 2</h2>
+
+  <!-- Electricity Used -->
+  <div>
+    <h3>Electricity Used</h3>
+    <div id="electricity_used_plot" class="plot-container"></div>
+  </div>
+</section>
+
+<!-- Scope 3 -->
+<section>
+  <h2>Scope 3</h2>
+
+  <!-- Product -->
+  <div>
+    <h3>Product</h3>
+    <div id="product_plot" class="plot-container"></div>
+  </div>
+
+  <!-- ProductTransport -->
+  <div>
+    <h3>Product Transport</h3>
+    <div id="product_transport_plot" class="plot-container"></div>
+  </div>
+
+  <!-- ResourceTransport -->
+  <div>
+    <h3>Resource Transport</h3>
+    <div id="resource_transport_plot" class="plot-container"></div>
+  </div>
+
+  <!-- Waste -->
+  <div>
+    <h3>Waste</h3>
+    <div id="waste_plot" class="plot-container"></div>
+  </div>
+</section>
+
+<script>
+    let rawData = JSON.parse('{{ df|escapejs }}');
+
+    // Grouping by 'scope' and 'cause' for the first plot
+    let groupedData1 = {};
+    rawData.forEach(function(row) {
+        let scope = row['scope'];
+        let cause = row['cause'];
+
+        if (!groupedData1[scope]) {
+            groupedData1[scope] = {};
+        }
+
+        if (!groupedData1[scope][cause]) {
+            groupedData1[scope][cause] = 0;
+        }
+
+        groupedData1[scope][cause] += row['emission'];
+    });
+
+    // Prepare data for the first plot (stacked bar plot)
+    let plotData1 = [];
+    for (let [scope, causeData] of Object.entries(groupedData1)) {
+        for (let [cause, emission] of Object.entries(causeData)) {
+            plotData1.push({
+                x: [scope],
+                y: [emission],
+                type: 'bar',
+                name: cause
+            });
+        }
+    }
+
+    // Create the 'emissions by scope and cause' plot
+    let layout1 = {
+        title: 'Center Emissions by Scope and Cause',
+        xaxis: { title: 'Scope' },
+        yaxis: { title: 'Emission' },
+        barmode: 'stack',
+    };
+
+    Plotly.newPlot('summary_plot', plotData1, layout1);
+
+    // Filter data for cause = 'Stationäre Verbrennung' for the second plot
+    let filteredData2 = rawData.filter(row => row['cause'] === 'Stationäre Verbrennung');
+
+    // Grouping by 'year' and 'resource' for the second plot
+    let groupedData2 = {};
+    filteredData2.forEach(function(row) {
+        let year = row['year'];
+        let resource = row['resource'];
+
+        if (!groupedData2[resource]) {
+            groupedData2[resource] = {};
+        }
+
+        if (!groupedData2[resource][year]) {
+            groupedData2[resource][year] = 0;
+        }
+
+        groupedData2[resource][year] += row['emission'];
+    });
+
+    // Prepare data for the second plot (bar plot)
+    let plotData2 = [];
+    for (let [resource, yearData] of Object.entries(groupedData2)) {
+        plotData2.push({
+            x: Object.keys(yearData),
+            y: Object.values(yearData),
+            type: 'bar',
+            name: resource
+        });
+    }
+
+    // Create the 'emissions by year and resource' plot
+    let layout2 = {
+        title: 'Emissions by Year and Resource for Stationäre Verbrennung',
+        xaxis: { title: 'Year' },
+        yaxis: { title: 'Emission' },
+        barmode: 'stack',
+    };
+
+    Plotly.newPlot('resources_burnt_plot', plotData2, layout2);
+</script>
+
+{% endblock %}

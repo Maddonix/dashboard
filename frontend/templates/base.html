@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+  <style>
+    html {
+      position: relative;
+      min-height: 100%;
+    }
+    body {
+      margin-bottom: 60px; /* Height of the footer */
+    }
+    .footer {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 60px; /* Height of the footer */
+      line-height: 60px; /* Vertically center the text there */
+    }
+    
+  </style>
+  {% block styles %} {% endblock %}
+  <title>{% block title %}{% endblock %}</title>
+</head>
+<body>
+  {% include 'header.html' %}
+
+  <div class="container-fluid">
+    <div class="row">
+      {% include 'sidebar.html' %}
+
+      <!-- Main Content -->
+      <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  {% include 'footer.html' %}
+
+  <!-- Optional JavaScript -->
+  <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

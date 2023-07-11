@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Product Groups
+{% endblock %}
+
+{% block styles %}
+
+    <style>
+        .product-group-container {
+            margin-bottom: 2em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 1em;
+            overflow: hidden;
+        }
+        .product-list {
+            height: 200px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            margin-top: 1em;
+            padding: 0.5em;
+        }
+        .product-list-item {
+            margin-bottom: 0.5em;
+        }
+        .chart-container {
+            height: 400px;
+            width: 100%;
+        }
+    </style>
+
+{% endblock %}
+
+
+{% block content %}
+
+<h1>Product Groups</h1>
+
+<div id="barchart"></div>
+
+
+{% comment %} <div id="product-groups-container">
+    {% for group in p_product_groups %}
+        <div class="product-group-container">
+            <h2>{{ group.name }}</h2>
+            <div class="pie-chart chart-container" id="pieChart{{ group.pk }}"></div>
+            <div class="product-list">
+                {% for product in group.products.all %}
+                    <div class="product-list-item">
+                        {{ product.name }}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+</div> {% endcomment %}
+
+
+<div id="product-groups-container">
+    {% for group in p_product_groups %}
+        <div class="product-group-container">
+            <h2>{{ group.name }}</h2>
+            
+            <!-- First row -->
+            <div class="row">
+                <!-- Left column -->
+                <div class="col-sm-6">
+                    <!-- Reference product details go here -->
+                    <div class="reference-product-details">
+                        <h4>Reference Product: {{ group.reference_product.name }}</h4>
+                        <p>{{ group.reference_product.materials_str|safe }}</p>
+                    </div>
+                </div>
+
+                <!-- Right column -->
+                <div class="col-sm-6 chart-container">
+                    <div class="pie-chart" id="pieChart{{ group.pk }}"></div>
+                </div>
+            </div>
+            
+            <!-- Second row -->
+            <div class="row">
+                <!-- Left column -->
+                <div class="col-sm-6">
+                    <div class="product-list">
+                        <h3>Associated Products</h3>
+                        {% for product in group.products.all %}
+                            <div class="product-list-item" data-product-id="{{ product.id }}">
+                                {{ product.name }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Right column -->
+                <div class="col-sm-6">
+                    <!-- Product summary goes here -->
+                    <div class="product-summary">
+                        <h3>Product Summary</h3>
+                        <p id="product-name"></p>
+                        <p id="product-weight"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(event) { 
+    var names = JSON.parse('{{ product_group_names|escapejs }}');
+    var counts = JSON.parse('{{ product_counts|escapejs }}');
+
+    var trace = {
+        x: names,
+        y: counts,
+        type: 'bar'
+    };
+
+    var layout = {title: 'Number of Products in Each Group'};
+
+    Plotly.newPlot('barchart', [trace], layout);
+
+    // pie chart for each group's reference product's materials
+    var groups = JSON.parse('{{ product_groups|escapejs }}');
+
+    for (var i = 0; i < groups.length; i++) {
+        var group = groups[i];
+        if (group.reference_product) {
+            var materialNames = [];
+            var materialWeights = [];
+            if (group.reference_product_material_tuples) {
+                for (var j = 0; j < group.reference_product_material_tuples.length; j++) {
+                    materialNames.push(group.reference_product_material_tuples[j][0]);
+                    materialWeights.push(group.reference_product_material_tuples[j][1]);
+                }
+            }
+            var data = [{
+                values: materialWeights,
+                labels: materialNames,
+                type: 'pie'
+            }];
+            var layout = {
+                title: 'Materials of Reference Product',
+                height: 400,
+                width: 500
+            };
+            var pieChartId = 'pieChart' + group.pk;
+            Plotly.newPlot(pieChartId, data, layout);
+        }
+    }
+});
+</script>
+
+<script>
+    $(function() {
+        $('.product-list-item').on('click', function() {
+            var productId = $(this).data('product-id');
+
+            // Here we are assuming that you have a Django view and URL
+            // set up to return JSON data for a single product.
+            // You would need to implement this view if you have not already done so.
+            var url = '/product-data/' + productId + '/';
+
+            $.getJSON(url, function(productData) {
+                $('#product-name').text(productData.name);
+                $('#product-weight').text(productData.product_weight);
+            });
+        });
+    });
+</script>
+
+
+{% endblock %}
