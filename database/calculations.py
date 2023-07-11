@@ -39,5 +39,5 @@ def create_product_emission_report(path_only = False):
 
     else: 
         profile = ProfileReport(df, title="Pandas Profiling Report")
-        profile.to_file(report_file_path)
+        # profile.to_file(report_file_path)
         return report_file_path
