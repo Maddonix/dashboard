@@ -1,6 +1,5 @@
 from django.core.management.base import BaseCommand
-from ...models import Center, EmissionFactor, Material, Product, ProductGroup, ProductMaterial, ProductWeight, Unit, CenterProduct,ProductEmission
-from ...import_module import delete_all_data
+from ...utils import delete_all_data
 
 class Command(BaseCommand):
     help = 'Remove all data from the database'

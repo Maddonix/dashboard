@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Green Endoscopy - Emission Dashboard</h1>
+
+<p>Our department's carbon footprint is calculated by considering three different emission scopes:</p>
+
+<h2>Summary</h2>
+<table id="df9" class="display"></table>
+<div id="df9Plot"></div>
+
+<h3>Scope 1: Burnt Fuels</h3>
+<p>This includes emissions from burnt fuels (gas/oil). Our estimation method is based on the area of the endoscopy unit and the total fuel consumption of the UKW area.</p>
+
+<table id="df7" class="display"></table>
+
+<h3>Scope 2: Electricity</h3>
+<p>This includes emissions from electricity usage. External electricity is carbon neutral, while emissions from our own electricity production are included under burnt waste.</p>
+
+<table id="df8" class="display"></table>
+
+<h3>Scope 3: Other Sources</h3>
+<p>This includes emissions from bought goods and services, fuel/energy associated emissions not reflected in Scope 1 or 2, transport and logistics, and local waste. We use a detailed analysis of one reference product per group to estimate the Product Carbon Footprint (PCF).</p>
+
+{# pretty print scope_3_center_products from context #}
+{# <pre>{{ scope_3_center_products|pprint }}</pre> #}
+
+{# pretty print the pandas dataframes ref_prod_df1 and ref_prod_df2  #}
+<h4>Product Groups - Reference Products</h4>
+<table id="df1" class="display"></table>
+<div id="df1Plot"></div>
+
+<h4>Reference Products - Materials </h4>
+<table id="df2" class="display"></table>
+<div id="df2PlotProduct"></div>
+<div id="df2PlotPackage"></div>
+
+<h4>Center Products - Production Emission </h4>
+<table id="df3" class="display"></table>
+<div id="df10Plot"></div>
+
+<h4>Center Products - Transport Emission </h4>
+<table id="df4" class="display"></table>
+
+<h4>Waste Emission </h4>
+<table id="df5" class="display"></table>
+
+<h4>Resource Transport Emission </h4>
+<table id="df6" class="display"></table>
+
+<script>
+let df1 = JSON.parse('{{ ref_prod_df1_json | escapejs }}');
+let df2 = JSON.parse('{{ ref_prod_df2_json | escapejs }}');
+let df3 = JSON.parse('{{ scope_3_center_products | escapejs }}');
+let df4 = JSON.parse('{{ scope_3_product_transport_emissions | escapejs }}');
+let df5 = JSON.parse('{{ scope_3_waste_emissions | escapejs }}');
+let df6 = JSON.parse('{{ scope_3_resource_transport_emissions | escapejs }}');
+let df7 = JSON.parse('{{ scope_1 | escapejs }}');
+let df8 = JSON.parse('{{ scope_2 | escapejs }}');
+let df9 = JSON.parse('{{ summary | escapejs }}');
+let df10 = JSON.parse('{{ plot_product_group_emission_df | escapejs }}');
+
+$(document).ready( function () {
+    $('#df1').DataTable({
+        data: df1,
+        columns: Object.keys(df1[0]).map(key => ({title: key, data: key}))
+    });
+
+    let xValues1 = df1.map(item => item.product_group);
+    let yValues1 = df1.map(item => item.emission_per_kg_product);   
+
+    // Create the bar chart
+    Plotly.newPlot('df1Plot', [{
+        x: xValues1,
+        y: yValues1,
+        type: 'bar'
+    }], {
+        title: 'Emission per kg Product by Product Group',
+        xaxis: {
+            title: 'Product Group'
+        },
+        yaxis: {
+            title: 'Emission per kg Product'
+        }
+    });
+
+
+    $('#df2').DataTable({
+        data: df2,
+        columns: Object.keys(df2[0]).map(key => ({title: key, data: key}))
+    });
+
+    let productData = df2.filter(item => item.component === 'product');
+    let packageData = df2.filter(item => item.component === 'package');
+    // Function to generate traces
+    function generateTraces(data) {
+        // Find unique materials
+        let materials = [...new Set(data.map(item => item.material))];
+
+        // Generate a trace for each material
+        let traces = materials.map(material => {
+            let filteredData = data.filter(item => item.material === material);
+
+            return {
+                x: filteredData.map(item => item.product_group),
+                y: filteredData.map(item => item.weight_kg),
+                name: material,
+                type: 'bar',
+            };
+        });
+
+        return traces;
+    }
+
+    // Generate layout for subplots
+    let layout = {
+        title: 'Weight by Product Group and Component',
+        xaxis: {title: 'Product Group'},
+        yaxis: {title: 'Weight (kg)'},
+        barmode: 'stack',
+    };
+
+    // Generate data for product and package
+    let productDataTraces = generateTraces(productData);
+    let packageDataTraces = generateTraces(packageData);
+
+    // Update layout title for each component
+    layout.title = 'Weight by Product Group - Product Component';
+    Plotly.newPlot('df2PlotProduct', productDataTraces, layout);
+
+    layout.title = 'Weight by Product Group - Package Component';
+    Plotly.newPlot('df2PlotPackage', packageDataTraces, layout);
+
+    $('#df3').DataTable({
+        data: df3,
+        columns: Object.keys(df3[0]).map(key => ({title: key, data: key}))
+    });
+    $('#df4').DataTable({
+        data: df4,
+        columns: Object.keys(df4[0]).map(key => ({title: key, data: key}))
+    });
+    $('#df5').DataTable({
+        data: df5,
+        columns: Object.keys(df5[0]).map(key => ({title: key, data: key}))
+    });
+    $('#df6').DataTable({
+        data: df6,
+        columns: Object.keys(df6[0]).map(key => ({title: key, data: key}))
+    });
+    $('#df7').DataTable({
+        data: df7,
+        columns: Object.keys(df7[0]).map(key => ({title: key, data: key}))
+    });
+    $('#df8').DataTable({
+        data: df8,
+        columns: Object.keys(df8[0]).map(key => ({title: key, data: key}))
+    });
+    $('#df9').DataTable({
+        data: df9,
+        columns: Object.keys(df9[0]).map(key => ({title: key, data: key}))
+    });
+    
+});
+
+// Make bar plot of summary data
+// Extract unique years
+var years = [...new Set(df9.map(item => item.year))];
+
+// Get the charts div
+var chartsDiv = document.getElementById('df9Plot');
+
+// Create one pie chart for each year
+years.forEach(year => {
+    var yearData = df9.filter(item => item.year === year);
+
+    // Create a new div for this pie chart
+    var div = document.createElement('div');
+    chartsDiv.appendChild(div);  // Append the new div to the charts div
+
+    // Create the pie chart in the new div
+    Plotly.newPlot(div, [{
+        values: yearData.map(item => item.emission_kg),
+        labels: yearData.map(item => item.scope),
+        type: 'pie'
+    }], {
+        title: 'Emissions in ' + year
+    });
+});
+
+
+// PLOT PRODUCT GROUP EMISSION
+// Find unique years
+let years10 = [...new Set(df10.map(item => item.year))];
+years10.sort((a, b) => a - b);
+
+// Generate a trace for each year
+let traces10 = years10.map(year => {
+    let filteredData = df10.filter(item => item.year === year);
+
+    return {
+        x: filteredData.map(item => item.product_group),
+        y: filteredData.map(item => item.total_emission_kg),
+        name: year.toString(),  // Convert year to string for display
+        type: 'bar',
+    };
+});
+
+// Generate layout
+let layout10 = {
+    title: 'Total Emission by Product Group and Year',
+    xaxis: {title: 'Product Group'},
+    yaxis: {title: 'Total Emission (kg)'},
+    barmode: 'group'
+};
+
+// Create the bar chart
+Plotly.newPlot('df10Plot', traces10, layout10);
+
+
+</script>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.22/css/jquery.dataTables.css">
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.22/js/jquery.dataTables.js"></script>
+
+
+
+{% endblock content %}
